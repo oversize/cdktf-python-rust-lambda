@@ -1,4 +1,4 @@
-# A Python lambda deployed with CDKTF
+# A Rust lambda deployed with CDKTF
 
 This project implements a lambda function in rust that is deployed
 to aws using the cdktf in python. The lambda does not do anything
