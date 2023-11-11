@@ -1,8 +1,7 @@
 
 venv:
 	: # Create venv if it doesn't exist
-	: # test -d venv || virtualenv -p python3 --no-site-packages venv
-	test -d .venv || python3 -m venv .venv
+	test -d .venv || virtualenv .venv
 
 install: venv
 	: # Activate venv and install somthing inside
@@ -14,13 +13,13 @@ install: venv
 diff:
 	: # Activate venv and install somthing inside
 	. .venv/bin/activate && (\
-		cdktf diff offchain-metadata-lambda\
+		cdktf diff rust_lambda_stack\
 	)
 
 deploy:
 	: # Activate venv and install somthing inside
 	. .venv/bin/activate && (\
-		cdktf deploy offchain-metadata-lambda\
+		cdktf deploy rust_lambda_stack\
 	)
 
 clean:

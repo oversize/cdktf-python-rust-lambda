@@ -1,64 +1,51 @@
 #!/usr/bin/env python
 """
-You write Stacks to group Resources. Or better Constructs that is!
-You can have multiple stacks within one project!
-But you only ever deploy one stack!
 """
-from dataclasses import dataclass
-from cdktf import App, S3Backend, TerraformStack, TerraformVariable
+import os
+from pathlib import Path
+from cdktf import App, TerraformStack, S3Backend
 from cdktf_cdktf_provider_aws.provider import AwsProvider
 from constructs import Construct
 
 from infra import (
-    MyRustLambdaFunc,
-    MyRustLambdaFuncConfig,
-    OffchainMetadataLoadbalancer,
-    OffchainMetadataRegistryBucket,
+    SimpleLambdaFunc,
+    SimpleLambdaFuncConfig,
 )
 
-
-@dataclass
-class MyRustLambdaStackConfig:
-    pass
+ROOTDIR = Path(__file__).parent
 
 
 class MyRustLambdaStack(TerraformStack):
-    """Stack for the offchain metadata api lambda solution.
-    Creates:
-        * Application Loadbalancer, Target Groups, Listener
-        * IAM Role for the lambda
-        * The lambda itself (based on ./offchain-metadata-api-lambda)
-    """
+    """Stack that creates some examples for rust lambdas"""
 
-    def __init__(self, scope: Construct, id: str, config: MyRustLambdaStackConfig):
+    def __init__(self, scope: Construct, id: str):
         super().__init__(scope, id)
         AwsProvider(self, "aws", region="eu-central-1")
-        # Enable S3 State
-        # S3Backend(self, bucket="XXX", key=f"XXX", region="XXX", dynamodb_table="XXX")
-        # The bucket where the Lambda will be deplozed from
-        MyRustLambdaFunc(
+        S3Backend(
             self,
-            "rust_lambda_func",
-            MyRustLambdaFuncConfig(
-                name="MyRustLambda",
-                other_option=True,
-                bucket_name="myrustlambda-cj184xy2",
-            ),
+            bucket=os.getenv("TFSTATE_BUCKET"),
+            key=os.getenv("TFSTATE_KEY"),
+            region=os.getenv("AWS_REGION"),
+            dynamodb_table=os.getenv("TFSTATE_LOCKTABLE"),
         )
-        bucket = OffchainMetadataRegistryBucket(self, "s3-bucket")
 
-        lb = OffchainMetadataLoadbalancer(self, "offchain-metadata-loadbalancer")
-        func = LambdaFunc(
+        SimpleLambdaFunc(
             self,
-            "lambda-func",
-            loadbalancer_target_group=lb.target_group,
-            loadbalancer_security_group=lb.security_group,
+            "simple_lambda",
+            SimpleLambdaFuncConfig(
+                name="SimpleRustLambda",
+                memory=128,
+                description="A super simple lambda that does nothing!",
+                artefact=ROOTDIR.joinpath(
+                    "./lambdas/simplelambda/target/lambda/simplelambda/bootstrap.zip"
+                ),
+            ),
         )
 
 
 def main():
     app = App(stack_traces=False)
-    MyRustLambdaStack(app, "rust_lambda_stack", MyRustLambdaStackConfig())
+    MyRustLambdaStack(app, "rust_lambda_stack")
     app.synth()
 
 

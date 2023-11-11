@@ -1,0 +1,17 @@
+[package]
+name = "simplelambda"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+#aws-config = "0.56.1"
+#aws-sdk-s3 = "0.32.0"
+lambda_runtime = "0.8.3"
+tokio = { version = "1", features = ["macros"] }
+#tokio-stream = "0.1.14"
+#tokio-util = "0.7.9"
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
+#ureq = "2.8.0"
+tokio-test = "0.4.3"
+serde = "1.0.192"

@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Union
 
 from cdktf import Fn, TerraformOutput
 from cdktf_cdktf_provider_aws.alb import Alb
@@ -37,7 +38,7 @@ from constructs import Construct
 ROOTDIR = Path(__file__).parent.parent
 
 
-class MyRustLambdaRole(IamRole):
+class SimpleLambdaRole(IamRole):
     def __init__(self, scope, id, role_name: str, **kwargs):
         super().__init__(
             scope,
@@ -168,7 +169,7 @@ class OffchainMetadataLoadbalancer(Construct):
         )
 
 
-class LambdaFunc(Construct):
+class OldLambdaFunc(Construct):
     """ """
 
     def __init__(
@@ -262,16 +263,38 @@ class LambdaFunc(Construct):
 
 
 @dataclass
-class MyRustLambdaFuncConfig:
+class SimpleLambdaFuncConfig:
+    """Configuration of the Lambda. Most values should be selfexaplanatory."""
+
     name: str  # Name of the Lambda itself
-    bucket_name: str  # Name of the bucket the artefact is stored
+    artefact: Path
+    memory: int
+    description: Union[str, None] = field(default=None)
 
 
-class MyRustLambdaFunc(Construct):
+class SimpleLambdaFunc(Construct):
+    """Construct that creates a Lamba Function.
+    Provide the code as a path to a local zip file"""
+
     bucket: S3Bucket
-    role: MyRustLambdaRole
+    role: SimpleLambdaRole
 
-    def __init__(self, scope, id, config: MyRustLambdaFuncConfig, **kwargs):
+    def __init__(self, scope, id, config: SimpleLambdaFuncConfig, **kwargs):
         super().__init__(scope, id, **kwargs)
-        self.bucket = S3Bucket(self, "", bucket=config.bucket_name)
-        self.role = MyRustLambdaRole(self, "rust_lambda_role", role_name=config.name)
+        # self.bucket = S3Bucket(self, "", bucket=config.bucket_name)
+        self.role = SimpleLambdaRole(self, f"{id}_role", role_name=config.name)
+        self.lambda_func = LambdaFunction(
+            self,
+            f"{id}_func",
+            function_name=config.name,
+            role=self.role.arn,
+            description=config.description,
+            handler="bootstrap",
+            runtime="provided.al2",
+            architectures=["arm64"],
+            memory_size=config.memory,
+            filename=config.artefact.as_posix(),
+            package_type="Zip",
+            source_code_hash=Fn.filebase64sha256(config.artefact.as_posix()),
+            tracing_config=LambdaFunctionTracingConfig(mode="PassThrough"),
+        )
